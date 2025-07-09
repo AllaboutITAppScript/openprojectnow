@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>กำลังเปิดหน้าคีย์เวิดที่เรียกใช้...</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* สร้างการหมุนรอบ */
+        .orbit {
+            animation: spin 1.5s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+    <script>
+        // ฟังก์ชันดึง Query Parameter จาก URL
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        // ฟังก์ชันเปิดลิงก์แบบไดนามิก
+        function autoOpenLine() {
+            const isMobileOrTablet = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const baseLink = "https://line.me/R/oaMessage/@allaboutitscript/"; // ลิงก์หลัก
+            const keyword = getQueryParam("keyword") || ""; // ดึง keyword จาก Query Parameter
+
+            const lineLink = baseLink + keyword; // เติม keyword ด้านหลังลิงก์
+
+            if (isMobileOrTablet) {
+                // ถ้าเป็นมือถือหรือแท็บเล็ต ให้เปิดลิงก์โดยตรง
+                window.location.href = lineLink;
+            } else {
+                // ถ้าไม่ใช่มือถือหรือแท็บเล็ต เปิดลิงก์ในแท็บใหม่และแจ้งเตือน
+                window.open(lineLink, '_top');
+                window.close(); // พยายามปิดหน้าต่าง แต่จะไม่ทำงานถ้าเปิดจาก URL โดยตรง
+            }
+        }
+
+        // เรียกฟังก์ชันทันทีเมื่อหน้าโหลด
+        window.onload = autoOpenLine;
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <!-- Overlay สำหรับ Loading -->
+    <div class="relative flex flex-col items-center space-y-4 bg-gray-900 bg-opacity-75 p-6 rounded-lg shadow-lg text-center">
+        <!-- รูปภาพโลโก้ -->
+        <div class="relative w-24 h-24">
+            <img 
+                src="https://img5.pic.in.th/file/secure-sv1/2564-01-03-094436.png" 
+                alt="Logo" 
+                class="w-full h-full object-contain z-10">
+            
+            <!-- Spinner หมุนรอบโลโก้ -->
+            <div 
+                class="absolute top-0 left-0 w-full h-full border-4 border-t-blue-500 border-transparent rounded-full orbit">
+            </div>
+        </div>
+
+        <!-- ข้อความ -->
+        <h2 class="text-2xl font-bold text-white">กำลังส่งคีย์เวิดไป...</h2>
+        <p class="text-sm text-gray-300">โปรดรอสักครู่ หากลิงก์ไม่เปิดโดยอัตโนมัติ โปรดตรวจสอบอุปกรณ์ของคุณ</p>
+        
+        <!-- ข้อความเพิ่มเติม -->
+        <p class="text-base text-yellow-400 font-semibold animate-bounce mt-4">
+            ครบเครื่องเรื่องไอที
+        </p>
+    </div>
+</body>
+</html>
