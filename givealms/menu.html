@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebApp Menu</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body class="bg-gray-100 flex flex-col justify-center items-center min-h-screen p-4">
+    <div id="profile" class="flex flex-col items-center mb-6">
+        <img id="profile-image" class="w-16 h-16 rounded-full mb-2" alt="Profile Picture">
+        <h2 id="profile-name" class="text-lg text-gray-800"></h2>
+    </div>
+    <div class="grid grid-cols-3 gap-4">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden w-24 h-24 text-center transform hover:translate-y-[-5px] transition-transform duration-200 cursor-pointer" onclick="sendMessage('Home')">
+            <i class="fas fa-home text-3xl mt-4 text-gray-800"></i>
+            <h2 class="text-sm mt-2 text-gray-800">Home</h2>
+        </div>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden w-24 h-24 text-center transform hover:translate-y-[-5px] transition-transform duration-200 cursor-pointer" onclick="sendMessage('Profile')">
+            <i class="fas fa-user text-3xl mt-4 text-gray-800"></i>
+            <h2 class="text-sm mt-2 text-gray-800">Profile</h2>
+        </div>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden w-24 h-24 text-center transform hover:translate-y-[-5px] transition-transform duration-200 cursor-pointer" onclick="sendMessage('Settings')">
+            <i class="fas fa-cog text-3xl mt-4 text-gray-800"></i>
+            <h2 class="text-sm mt-2 text-gray-800">Settings</h2>
+        </div>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden w-24 h-24 text-center transform hover:translate-y-[-5px] transition-transform duration-200 cursor-pointer" onclick="sendMessage('Messages')">
+            <i class="fas fa-envelope text-3xl mt-4 text-gray-800"></i>
+            <h2 class="text-sm mt-2 text-gray-800">Messages</h2>
+        </div>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden w-24 h-24 text-center transform hover:translate-y-[-5px] transition-transform duration-200 cursor-pointer" onclick="sendMessage('Calendar')">
+            <i class="fas fa-calendar-alt text-3xl mt-4 text-gray-800"></i>
+            <h2 class="text-sm mt-2 text-gray-800">Calendar</h2>
+        </div>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden w-24 h-24 text-center transform hover:translate-y-[-5px] transition-transform duration-200 cursor-pointer" onclick="sendMessage('Shop')">
+            <i class="fas fa-shopping-cart text-3xl mt-4 text-gray-800"></i>
+            <h2 class="text-sm mt-2 text-gray-800">Shop</h2>
+        </div>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden w-24 h-24 text-center transform hover:translate-y-[-5px] transition-transform duration-200 cursor-pointer" onclick="sendMessage('Notifications')">
+            <i class="fas fa-bell text-3xl mt-4 text-gray-800"></i>
+            <h2 class="text-sm mt-2 text-gray-800">Notifications</h2>
+        </div>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden w-24 h-24 text-center transform hover:translate-y-[-5px] transition-transform duration-200 cursor-pointer" onclick="sendMessage('Search')">
+            <i class="fas fa-search text-3xl mt-4 text-gray-800"></i>
+            <h2 class="text-sm mt-2 text-gray-800">Search</h2>
+        </div>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden w-24 h-24 text-center transform hover:translate-y-[-5px] transition-transform duration-200 cursor-pointer" onclick="sendMessage('Library')">
+            <i class="fas fa-book text-3xl mt-4 text-gray-800"></i>
+            <h2 class="text-sm mt-2 text-gray-800">Library</h2>
+        </div>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden w-24 h-24 text-center transform hover:translate-y-[-5px] transition-transform duration-200 cursor-pointer" onclick="sendMessage('Analytics')">
+            <i class="fas fa-chart-bar text-3xl mt-4 text-gray-800"></i>
+            <h2 class="text-sm mt-2 text-gray-800">Analytics</h2>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await liff.init({ liffId: '1656032875-9znqawmJ' });
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    document.getElementById('profile-image').src = profile.pictureUrl;
+                    document.getElementById('profile-name').innerText = `Welcome, ${profile.displayName}`;
+                } else {
+                    liff.login();
+                }
+            } catch (error) {
+                console.error('LIFF initialization failed', error);
+            }
+        });
+
+        async function sendMessage(menuName) {
+            try {
+                await liff.sendMessages([{
+                    type: 'text',
+                    text: `${menuName}`
+                }]);
+                //liff.closeWindow();
+            } catch (error) {
+                console.error('Failed to send message', error);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <title>LIFF Drawing App</title>
+  <script src="https://static.line-scdn.net/liff/edge/versions/2.9.0/sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <!-- LineSeed Fonts -->
+    <link href="https://cdn.jsdelivr.net/gh/maketline/goodday/font/stylesheet.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #f4f4f4;
+      font-family: 'line_seed_sans_th';
+    }
+    canvas {
+      border: 1px solid #000;
+      touch-action: none;
+    }
+    button {
+      margin-top: 20px;
+      padding: 15px;
+      font-size: 18px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      width: 80%;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <button id="sendBtn">แชร์รูปภาพ</button>
+
+  <script>
+    liff.init({ liffId: "1656032875-9znqawmJ" }) // แทนที่ด้วย LIFF ID ของคุณ
+      .then(() => initializeApp())
+      .catch((err) => console.error('LIFF Initialization failed', err));
+
+    function initializeApp() {
+      const canvas = document.getElementById("canvas");
+      const context = canvas.getContext("2d");
+      const sendBtn = document.getElementById("sendBtn");
+
+      canvas.width = window.innerWidth - 20;
+      canvas.height = window.innerHeight - 100;
+
+      let isDrawing = false;
+      let lastX = 0;
+      let lastY = 0;
+
+      function draw(x, y) {
+        if (!isDrawing) return;
+        context.lineWidth = 5;
+        context.lineCap = "round";
+        context.strokeStyle = "black";
+        context.beginPath();
+        context.moveTo(lastX, lastY);
+        context.lineTo(x, y);
+        context.stroke();
+        [lastX, lastY] = [x, y];
+      }
+
+      canvas.addEventListener("mousedown", (e) => {
+        isDrawing = true;
+        [lastX, lastY] = [e.offsetX, e.offsetY];
+      });
+      canvas.addEventListener("mousemove", (e) => draw(e.offsetX, e.offsetY));
+      canvas.addEventListener("mouseup", () => isDrawing = false);
+      canvas.addEventListener("mouseout", () => isDrawing = false);
+
+      canvas.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        isDrawing = true;
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        [lastX, lastY] = [touch.clientX - rect.left, touch.clientY - rect.top];
+      });
+      canvas.addEventListener("touchmove", (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        draw(touch.clientX - rect.left, touch.clientY - rect.top);
+      });
+      canvas.addEventListener("touchend", () => isDrawing = false);
+
+      sendBtn.addEventListener("click", async () => {
+        try {
+          const base64Image = canvas.toDataURL("image/png");
+          const uploadedImageUrl = await uploadToGoogleDrive(base64Image);
+
+          await liff.shareTargetPicker([
+            {
+              type: 'image',
+              originalContentUrl: uploadedImageUrl,
+              previewImageUrl: uploadedImageUrl,
+              "animated": true,
+                "extension": 'png',
+                "sentBy": {
+                  "label": 'ครบเครื่องเรื่องไอที [✏️ลองเล่นที่นี่]',
+                  "iconUrl": 'https://img5.pic.in.th/file/secure-sv1/2564-01-03-094436.png',
+                  "linkUrl": 'line://app/1656032875-9znqawmJ?linkurl=https://demoproject2024.glitch.me/drawing.html'
+                }
+
+            },
+          ]);
+
+          alert("แชร์สำเร็จ!");
+          liff.closeWindow();
+        } catch (error) {
+          console.error("Error:", error);
+          alert("การส่งล้มเหลว!");
+        }
+      });
+    }
+
+async function uploadToGoogleDrive(base64Image) {
+  const webAppUrl = "https://script.google.com/macros/s/AKfycbxWa_bwthEhIGUJWEnDc9SMaqJ0OnNyWUzkaoQ-PYTj2u3ML_PC7Kf_OMJVqMoUsNPU/exec"; // แทนที่ด้วย URL ของ Web App
+
+  try {
+    const response = await axios.post(webAppUrl, base64Image.split(",")[1], {
+      headers: {
+        "Content-Type": "text/plain",
+      },
+    });
+
+    if (response.data.success) {
+      const fileId = response.data.fileId; // รับ fileId จากการตอบกลับของ Web App
+      // สร้าง URL ในรูปแบบ lh3 ที่สามารถแสดงผลได้
+      const fileUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
+      return fileUrl; // คืนค่า URL ของไฟล์ในรูปแบบ lh3
+    } else {
+      throw new Error(response.data.error || "Upload failed");
+    }
+  } catch (error) {
+    console.error("Error uploading to Google Drive:", error);
+    throw error;
+  }
+}
+
+  </script>
+</body>
+</html>

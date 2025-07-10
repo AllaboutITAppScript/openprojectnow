@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form to Google Sheet with LIFF</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://static.line-scdn.net/liff/edge/versions/2.9.0/sdk.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+        }
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            visibility: hidden;
+        }
+        #loadingOverlay.active {
+            visibility: visible;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay">
+        <div class="spinner-border animate-spin rounded-full h-16 w-16 border-t-4 border-white"></div>
+    </div>
+
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <!-- Profile Info -->
+        <div id="profileInfo" class="text-center mb-6 hidden">
+            <img id="profileImage" class="w-20 h-20 rounded-full mx-auto mb-4" alt="Profile">
+            <h2 id="profileName" class="text-xl font-bold"></h2>
+        </div>
+
+        <h1 class="text-2xl font-bold text-center mb-6">Save Data to Google Sheet</h1>
+        <form id="dataForm" class="space-y-4">
+            <input type="hidden" name="userId" id="userId">
+            <input type="hidden" name="lineName" id="lineName"> <!-- Hidden input for LINE name -->
+            <div>
+                <label for="name" class="block text-gray-700">Name</label>
+                <input type="text" name="name" id="name" class="w-full p-2 border rounded-md" placeholder="Enter your name" required>
+            </div>
+            <div>
+                <label for="email" class="block text-gray-700">Email</label>
+                <input type="email" name="email" id="email" class="w-full p-2 border rounded-md" placeholder="Enter your email" required>
+            </div>
+            <div>
+                <label for="phone" class="block text-gray-700">Phone</label>
+                <input type="tel" name="phone" id="phone" class="w-full p-2 border rounded-md" placeholder="Enter your phone" required>
+            </div>
+            <button type="submit" id="submitButton" class="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600">
+                Submit
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById("dataForm");
+        const submitButton = document.getElementById("submitButton");
+        const loadingOverlay = document.getElementById("loadingOverlay");
+        const profileInfo = document.getElementById("profileInfo");
+        const profileName = document.getElementById("profileName");
+        const profileImage = document.getElementById("profileImage");
+        const userIdInput = document.getElementById("userId");
+        const lineNameInput = document.getElementById("lineName");
+
+        let profilePicUrl = ''; // Variable to store profile picture URL
+
+        // Initialize LIFF
+        async function initLIFF() {
+            try {
+                await liff.init({ liffId: "1656032875-9znqawmJ" }); // Replace with your LIFF ID
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    userIdInput.value = profile.userId;
+                    profileName.textContent = profile.displayName;
+                    profileImage.src = profile.pictureUrl; // Set profile image
+                    profilePicUrl = profile.pictureUrl; // Store profile picture URL
+                    lineNameInput.value = profile.displayName; // Save LINE name to hidden input
+                    profileInfo.classList.remove("hidden");
+                } else {
+                    liff.login();
+                }
+            } catch (error) {
+                console.error("LIFF Initialization Failed", error);
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Show loading overlay
+            loadingOverlay.classList.add("active");
+
+            // Disable button
+            submitButton.disabled = true;
+
+            // Collect form data
+            const formData = new FormData(form);
+
+            try {
+                // Fetch to Google Apps Script
+                const response = await fetch('https://script.google.com/macros/s/AKfycbybjq4iTDgyax5gR3o_xq8n7eYO00WbpFTNZ6Dc_9eZnVW5fhg3NChBFvaIOUy3lUl-/exec', {
+                    method: "POST",
+                    body: formData
+                });
+
+                const result = await response.text();
+
+                // Hide loading overlay
+                loadingOverlay.classList.remove("active");
+
+                // Enable button
+                submitButton.disabled = false;
+
+                // Show success alert
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Data Saved',
+                    text: result,
+                });
+
+                // Send Flex Message to LINE Chat with form data and LINE Profile
+                sendFlexMessage();
+                liff.closeWindow();
+                // Reset form
+                form.reset();
+            } catch (error) {
+                // Hide loading overlay
+                loadingOverlay.classList.remove("active");
+
+                // Enable button
+                submitButton.disabled = false;
+
+                // Show error alert
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Unable to save data. Please try again.',
+                });
+            }
+        });
+
+        // Function to send Flex Message
+        async function sendFlexMessage() {
+            const name = document.getElementById("name").value;
+            const email = document.getElementById("email").value;
+            const phone = document.getElementById("phone").value;
+            const lineName = document.getElementById("lineName").value;
+
+            const flexMessage = {
+                "type": "flex",
+                "altText": "Data Submission Confirmation",
+                "contents": {
+                    "type": "bubble",
+                    "hero": {
+                        "type": "image",
+                        "url": profilePicUrl,  // Use the profile picture URL
+                        "size": "full",
+                        "aspectRatio": "20:13",
+                        "aspectMode": "cover"
+                    },
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "Thank you, " + lineName + "!",
+                                "weight": "bold",
+                                "size": "lg",
+                                "align": "center"
+                            },
+                            {
+                                "type": "text",
+                                "text": "We have received your information:",
+                                "size": "sm",
+                                "align": "center",
+                                "color": "#aaaaaa"
+                            },
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "spacing": "sm",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "Name: " + name,
+                                        "size": "sm"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "Email: " + email,
+                                        "size": "sm"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "Phone: " + phone,
+                                        "size": "sm"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            };
+
+            try {
+                await liff.sendMessages([flexMessage]);
+            } catch (error) {
+                console.error("Error sending Flex Message:", error);
+            }
+        }
+
+        // Run LIFF on page load
+        window.onload = initLIFF;
+    </script>
+</body>
+</html>

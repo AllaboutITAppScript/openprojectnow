@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <title>LIFF Drawing App</title>
+  <script src="https://static.line-scdn.net/liff/edge/versions/2.9.0/sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+   <!-- LineSeed Fonts -->
+    <link href="https://cdn.jsdelivr.net/gh/maketline/goodday/font/stylesheet.min.css" rel="stylesheet">
+  <!-- FontAwesome for icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/gh/maketline/goodday/font/stylesheet.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #f4f4f4;
+      font-family: 'line_seed_sans_th';
+    }
+    canvas {
+      border: 1px solid #000;
+      touch-action: none;
+      margin-bottom: 10px;
+    }
+    .button-container {
+      display: flex;
+      justify-content: space-between;
+      width: 80%;
+      margin-top: 10px;
+    }
+    .color-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 10px 0;
+    }
+    .color-button {
+      width: 30px;
+      height: 30px;
+      margin: 5px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    button {
+      padding: 15px;
+      font-size: 18px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      width: 48%;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    canvas {
+      border: 1px solid #000;
+      touch-action: none;
+      margin-top: 120px; /* Add margin to push canvas down below the fixed header */
+      margin-bottom: 20px;
+    }
+
+    header {
+      background-color: #007bff;
+      color: white;
+      text-align: center;
+      padding: 20px;
+      width: 100%;
+      position: fixed; /* Fix header at the top */
+      top: 0; /* Keep it at the top */
+      left: 0;
+      z-index: 1000; /* Ensure it stays above the content */
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center bg-gray-100 h-screen">
+
+  <!-- Header -->
+  <header class="w-full bg-blue-600 text-white text-center p-6 rounded-b-3xl shadow-md">
+    <h1 class="text-2xl font-bold mb-2">🎨 แอปวาดภาพ</h1>
+    <p class="text-lg">ลองสร้างสรรค์ผลงานด้วยตัวคุณเอง!</p>
+  </header>
+
+  <!-- Canvas Section -->
+  <section class="flex flex-col items-center w-full p-6 flex-grow">
+    <canvas id="canvas" class="shadow-lg border border-gray-300 rounded-xl"></canvas>
+  </section>
+
+  <!-- Toolbar -->
+  <section class="w-full max-w-lg mx-auto p-4">
+    <!-- Color Picker -->
+    <div id="colorContainer" class="flex items-center justify-center gap-3 flex-wrap p-4 bg-white shadow-md rounded-lg mb-6">
+      <p class="w-full text-center text-gray-700 font-medium mb-2">เลือกสีปากกา:</p>
+    </div>
+    
+    
+    <!-- Buttons -->
+    <div class="flex justify-between gap-6 p-4 bg-white shadow-md rounded-lg">
+      <button id="clearBtn" class="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-full shadow-md flex items-center justify-center">
+        <i class="fas fa-eraser mr-2"></i> เคลียร์ภาพ
+      </button>
+      <button id="sendBtn" class="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-full shadow-md flex items-center justify-center">
+        <i class="fas fa-share-alt mr-2"></i> แชร์ภาพ
+      </button>
+    </div>
+  </section>
+    
+  <script>
+    liff.init({ liffId: "1656032875-9znqawmJ" }) // แทนที่ด้วย LIFF ID ของคุณ
+      .then(() => initializeApp())
+      .catch((err) => console.error('LIFF Initialization failed', err));
+
+    function initializeApp() {
+      const canvas = document.getElementById("canvas");
+      const context = canvas.getContext("2d");
+      const sendBtn = document.getElementById("sendBtn");
+      const clearBtn = document.getElementById("clearBtn");
+      const colorContainer = document.getElementById("colorContainer");
+
+      const colors = [
+        "#FF0000", "#FFA500", "#FFFF00", "#008000", "#0000FF", 
+        "#4B0082", "#EE82EE", "#000000", "#808080", "#FFFFFF", 
+        "#A52A2A", "#FFD700"
+      ];
+      let currentColor = "#000000"; // สีเริ่มต้น
+
+      colors.forEach(color => {
+        const button = document.createElement("button");
+        button.className = "color-button";
+        button.style.backgroundColor = color;
+        button.addEventListener("click", () => {
+          currentColor = color;
+        });
+        colorContainer.appendChild(button);
+      });
+
+      canvas.width = window.innerWidth - 20;
+      canvas.height = window.innerHeight - 200;
+
+      let isDrawing = false;
+      let lastX = 0;
+      let lastY = 0;
+
+      function draw(x, y) {
+        if (!isDrawing) return;
+        context.lineWidth = 5;
+        context.lineCap = "round";
+        context.strokeStyle = currentColor;
+        context.beginPath();
+        context.moveTo(lastX, lastY);
+        context.lineTo(x, y);
+        context.stroke();
+        [lastX, lastY] = [x, y];
+      }
+
+      canvas.addEventListener("mousedown", (e) => {
+        isDrawing = true;
+        [lastX, lastY] = [e.offsetX, e.offsetY];
+      });
+      canvas.addEventListener("mousemove", (e) => draw(e.offsetX, e.offsetY));
+      canvas.addEventListener("mouseup", () => isDrawing = false);
+      canvas.addEventListener("mouseout", () => isDrawing = false);
+
+      canvas.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        isDrawing = true;
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        [lastX, lastY] = [touch.clientX - rect.left, touch.clientY - rect.top];
+      });
+      canvas.addEventListener("touchmove", (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        draw(touch.clientX - rect.left, touch.clientY - rect.top);
+      });
+      canvas.addEventListener("touchend", () => isDrawing = false);
+
+      sendBtn.addEventListener("click", async () => {
+        try {
+          const base64Image = canvas.toDataURL("image/png");
+          const uploadedImageUrl = await uploadToGoogleDrive(base64Image);
+          await liff.shareTargetPicker([
+             {
+              type: 'image',
+              originalContentUrl: uploadedImageUrl,
+              previewImageUrl: uploadedImageUrl,
+              "animated": true,
+                "extension": 'png',
+                "sentBy": {
+                  "label": 'ครบเครื่องเรื่องไอที [✏️ลองเล่นที่นี่]',
+                  "iconUrl": 'https://img5.pic.in.th/file/secure-sv1/2564-01-03-094436.png',
+                  "linkUrl": 'line://app/1656032875-9znqawmJ?linkurl=https://demoproject2024.glitch.me/drawing.html'
+                }
+
+            },
+          ]);
+
+          showToast()
+          liff.closeWindow();
+        } catch (error) {
+          console.error("Error:", error);
+          alert("การส่งล้มเหลว!");
+        }
+      });
+
+      clearBtn.addEventListener("click", () => {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+      });
+    }
+
+    async function uploadToGoogleDrive(base64Image) {
+      const webAppUrl = "https://script.google.com/macros/s/AKfycbxWa_bwthEhIGUJWEnDc9SMaqJ0OnNyWUzkaoQ-PYTj2u3ML_PC7Kf_OMJVqMoUsNPU/exec";
+
+      try {
+        const response = await axios.post(webAppUrl, base64Image.split(",")[1], {
+          headers: {
+            "Content-Type": "text/plain",
+          },
+        });
+
+        if (response.data.success) {
+          const fileId = response.data.fileId;
+          const fileUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
+          return fileUrl;
+        } else {
+          throw new Error(response.data.error || "Upload failed");
+        }
+      } catch (error) {
+        console.error("Error uploading to Google Drive:", error);
+        throw error;
+      }
+    }
+    
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'bottom-right',  // ปรับตำแหน่งการแสดงผลที่มุมล่างขวา
+      showConfirmButton: false,
+      timer: 8000,
+      timerProgressBar: true,
+      background: '#4CAF50',  // ตั้งค่าพื้นหลังเป็นสีเขียว
+      color: '#fff',  // ตัวอักษรสีขาว
+      iconColor: '#fff',  // สีของไอคอนเป็นสีขาว
+      didOpen: (toast) => {
+        toast.onmouseenter = Swal.stopTimer;
+        toast.onmouseleave = Swal.resumeTimer;
+      },
+      customClass: {
+        popup: 'rounded-lg shadow-lg',  // เพิ่มขอบโค้งและเงาให้กับกล่อง
+      },
+    });
+
+    function showToast() {
+      Toast.fire({
+        icon: 'success',
+        title: 'ลงชื่อเข้าใช้สำเร็จ!',  // เปลี่ยนข้อความตามต้องการ
+      });
+    }
+  </script>
+  
+
+</body>
+</html>
